@@ -1,0 +1,25 @@
+Package: commonweights
+Title: Calculate the Effects of Changes in Subnational Survey Weights
+Version: 0.0.0.9000
+Authors@R: c(person("Caitlin", "Clary", email = "caitlin.clary@biostatglobal.com",
+           role = c("aut", "cre")), 
+           person(given = "Shiraz", family = "Johnson", email = "johnsons2@grinnell.edu", 
+           role = "aut"))
+Description: Provides functions to analyze multiple survey datasets, calculating 
+    changes in subnational weights and the effects of those changes on estimated
+    national outcomes.
+License: usethis::use_gpl3_license()
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Imports: 
+    dplyr,
+    tidyr,
+    ggplot2,
+    openxlsx,
+    grid,
+    gridExtra,
+    survey
+Depends: 
+    R (>= 2.10)

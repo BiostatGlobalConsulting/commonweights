@@ -1,0 +1,216 @@
+---
+title: "Vignette: commonweights package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{introduction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+knitr::opts_knit$set(
+  dev.args = list(type = "cairo"))
+```
+
+```{r pkgs, include=FALSE}
+library(tidyverse)
+library(kableExtra)
+```
+
+## Package installation
+
+The easiest way to use the `commonweights` package is to install it directly from GitHub: 
+
+```{r install, eval = FALSE}
+devtools::install_github("BiostatGlobalConsulting/commonweights")
+```
+
+Once the package is installed, load it: 
+
+```{r setup}
+library(commonweights)
+```
+
+## Harmonia dataset
+
+We'll use an example dataset with three survey samples from the imaginary country of Harmonia. 
+
+```{r data}
+data("fauxdata")
+```
+
+The dataset includes samples from 2005, 2010, and 2015. In addition to the year variable, the dataset has stratum and cluster IDs, a variable indicating the child's age in years, the `psweight` variable which shows each child's survey weight (the number of children in the population represented by this respondent), and three dichotomous variable: possession of a vaccination card, vaccination with DPT3, and vaccination with MCV1. 
+
+Here are the first few rows of the faux dataset: 
+
+```{r datahead, echo=FALSE}
+kableExtra::kbl(head(fauxdata)) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+```
+
+## Using the cwt_output function
+
+The core function in the commonweights package is called `cwt_output`. It has the following arguments: 
+
+*data* Dataset to analyze. Should have one row per respondent and contain survey data from at least two years.
+
+*outcomevars* Names of dichotomous outcome variable(s) coded 0/1/NA. Provide as a single variable name e.g. "dpt3_vx" or as multiple variables in a concatenated list, e.g. c("dpt3_vx", "mcv1_vx")
+
+*outcomenames* Names of the outcomes in `outcomevars` to use in tables and plots; must be the same length as `outcomevars`. Optional, defaults to NULL. E.g. c("DPT3", "MCV1")
+
+*geovar* Name of geography variable in `data`. Must have the same levels across all years in `years`.
+
+*yearvar* Variable in dataset indicating survey year
+
+*weightvar* Variable in dataset containing survey weights for each respondent
+
+*years* Data years to analyze. Defaults to "all", which will analyse all years in `yearvar`. To analyze a subset of years, provide a vector of years to include, e.g. c(2000, 2005, 2010)
+
+*weightopt* Which year(s) to use as common weights. "earliest" will calculate outcomes post-stratified to the earliest year in `years`. "previous" will calculate outcomes for each survey year using the weights from the previous survey year. "custom" allows the user to select a year to use weights from.
+
+*weightyear* Year to use for post-stratifying if `weightopt = "custom"`
+
+*age* Age to filter by. Defaults to NULL. Provide as a single value of `agevar` to keep or provide as a pair of values for minimum and maximum ages, e.g. `age = c(12, 23)` will keep `agevar >= 12` and `<= 23`.
+
+*agevar* Age variable in dataset; used if `age` is not NULL. Defaults to NA.
+
+*ci* a logical value indicating whether confidence intervals should be calculated for outcomes.  Defaults to FALSE
+
+*cilevel* Defaults to 0.95
+
+*clustvar* Variable in the dataset identifying which cluster each respondent belongs to. Used in confidence interval calculations to take survey design into account. Provide if `ci = TRUE`. Defaults to NULL.
+
+*stratvar* Variable in the dataset identifying which stratum each respondent belongs to. Used in confidence interval calculations to take survey design into account. Provide if `ci = TRUE`. Defaults to NULL.
+
+*countryname* Character, name of the country (or other top-level grouping) that `data` is from
+statelabels Character vector of labels corresponding to the levels of `geovar`. Defaults to NULL
+
+*palette* Color palette for the levels of `geovar` in output plots. Defaults to NULL, in which case a default ggplot2 palette will be used.
+
+If you don't want to use the default ggplot2 colors in the subnational weight plot, define a color palette with at least as many levels as your geography variable. The Harmonia dataset has ten districts, so the palette we define should have at least ten colors. 
+
+```{r palette}
+pal <- c("#f7abc1", "#a2d3fa", "#69c9c8", "#f1cfa1", "#a33c51", 
+         "#ed8e1c", "#298667", "#0d6eba", "#b8f5f2", "#081116")
+```
+
+```{r harmonia, message = FALSE}
+harmonia <- cwt_output(
+  data = fauxdata,
+  outcomevars = c("has_card", "dpt3_vx", "mcv_vx"),
+  outcomenames = c("Vaccination Card", "DPT3", "MCV1"),
+  geovar = "geo",
+  yearvar = "year",
+  weightvar = "psweight",
+  years = "all",
+  weightopt = "previous",
+  age = 1,
+  agevar = "age",
+  ci = TRUE,
+  cilevel = 0.95,
+  clustvar = "clusterid",
+  stratvar = "stratumid",
+  countryname = "Harmonia",
+  statelabels = NULL,
+  palette = pal
+)
+```
+
+The `cwt_output` function returns eight kinds of objects: 
+
+```{r slots, echo=FALSE}
+cat(names(harmonia), sep="\n")
+```
+
+1. `weightdata` is a data frame showing the relative weight for each level of the `geo` variable for each year in the dataset. This table is the basis for the visualization of weights over time in the `weight_plot` output. 
+
+```{r output1, echo = FALSE}
+kableExtra::kbl(harmonia$weightdata) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+```
+
+2. `outcomes` is a data frame that contains, for each outcome and each year specified in the function call, the point estimate using original weights (`Outcome_Original`), a survey-adjusted Wilson confidence interval for that point estimate (`CI_LB_Original` and `CI_UB_Original`), and the point estimate when weights are post-stratified. 
+
+```{r output2, echo=FALSE}
+kableExtra::kbl(harmonia$outcomes) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+```
+
+3. `state_outcomes` contains subnational outcome estimates for each level of `geovar`. Recall that post-stratifying does not affect outcome estimates at this lower level -- it only impacts how the subnational estimates are aggregated to produce a national estimate. So, there are no "original" and "post-stratified" outcome estimates in this table. 
+
+```{r output3, echo = FALSE}
+kableExtra::kbl(harmonia$state_outcomes) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+```
+
+4. `tables` is a list containing a data frame for each outcome specified. Each row represents a survey pair, and contains original and post-stratified outcome estimates for both years in the survey pair, as well as calculations of relative difference due to state weights (RDSW) and difference-in-differences. `tables` also contains an openxlsx Worksheet object called `excel`, which is ready to export as a spreadsheet; more on that below. 
+
+```{r output4a, echo = FALSE}
+cat(names(harmonia$tables), sep="\n")
+```
+
+You can view the individual data frames with syntax like: 
+
+```{r output4b, eval = FALSE}
+harmonia$tables$Harmonia_dpt3_vx_table
+```
+
+```{r output4c, echo = FALSE}
+kableExtra::kbl(harmonia$tables$Harmonia_dpt3_vx_table)%>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+```
+
+You can save the Excel object - basically, formatted versions of the individual outcome tables - with syntax like the following: 
+
+```{r output4d, eval = FALSE}
+openxlsx::saveWorkbook(harmonia$tables$excel, file = "HarmoniaTables.xlsx")
+```
+
+The Excel spreadsheet will have a tab for each outcome. 
+
+5. `weight_plot` is a plot showing how subnational weights change over time. 
+
+```{r output5, echo = FALSE, fig.width = 5}
+harmonia$weight_plot
+```
+
+6. `state_outcome_plots` is a list of plots, each showing outcomes in each geographic area over time. 
+
+For example, to look at the plot for DPT3 coverage by district: 
+
+```{r output6, fig.width=5}
+harmonia$state_outcome_plots$state_plot_dpt3_vx
+```
+
+7. `national_outcome_plots` is a list of plots, each showing original and post-stratified outcomes over time. 
+
+For example, to look at the plot for MCV1 coverage: 
+
+```{r output7, fig.width=5}
+harmonia$national_outcome_plots$national_plot_mcv_vx
+```
+
+8. `combined_plots` aggregates `weight_plot` and the subnational and national plots for each outcome. The weight and subnational outcome plots help put the plot of original and post-stratified outcomes in context. There is one combined plot for each outcome variable. 
+
+You can display these plots with `grid::grid.draw` to view in an R session: 
+
+```{r output8a, eval = FALSE}
+grid::grid.draw(harmonia$combined_plots$combined_plot_dpt3_vx)
+```
+
+```{r output8b, echo = FALSE, fig.width=6, fig.height=12}
+gridExtra::grid.arrange(
+  grobs = list(harmonia$weight_plot, 
+               harmonia$state_outcome_plots$state_plot_dpt3_vx, 
+               harmonia$national_outcome_plots$national_plot_dpt3_vx),
+  ncol = 1
+)
+```
+
+Or you can save the combined plots with ggsave: 
+
+```{r output8c,eval= FALSE}
+ggplot2::ggsave("CombinedPlotDPT3.png"
+       harmonia$combined_plots$combined_plot_dpt3_vx, 
+       height = 12, width = 6, units = "in")
+```
+
