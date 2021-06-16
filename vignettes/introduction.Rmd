@@ -26,7 +26,8 @@ library(kableExtra)
 The easiest way to use the `commonweights` package is to install it directly from GitHub: 
 
 ```{r install, eval = FALSE}
-devtools::install_github("BiostatGlobalConsulting/commonweights")
+if(!requireNamespace("remotes")){install.packages("remotes")}
+remotes::install_github("BiostatGlobalConsulting/commonweights")
 ```
 
 Once the package is installed, load it: 
