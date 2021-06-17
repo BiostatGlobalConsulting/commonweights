@@ -1,6 +1,6 @@
 #' Common Weight Output
 #'
-#' Analyze multiple survey datasets: calculate changes in state weights over time, post-stratify to specified year(s), produce tables and plots
+#' Analyze multiple survey datasets: calculate changes in subnational weights over time, post-stratify to specified year(s), produce tables and plots
 #' @param data Dataset to analyze. Should have one row per respondent and contain survey data from at least two years.
 #' @param outcomevars Names of dichotomous outcome variable(s) coded 0/1/NA. Provide as a single variable name e.g. "dpt3_vx" or as multiple variables in a concatenated list, e.g. c("dpt3_vx", "mcv1_vx")
 #' @param outcomenames Names of the outcomes in \code{outcomevars} to use in tables and plots; must be the same length as \code{outcomevars}. Optional, defaults to NULL. E.g. c("DPT3", "MCV1")
@@ -17,7 +17,7 @@
 #' @param clustvar Variable in the dataset identifying which cluster each respondent belongs to. Used in confidence interval calculations to take survey design into account. Provide if \code{ci = TRUE}. Defaults to NULL.
 #' @param stratvar Variable in the dataset identifying which stratum each respondent belongs to. Used in confidence interval calculations to take survey design into account. Provide if \code{ci = TRUE}. Defaults to NULL.
 #' @param countryname Character, name of the country (or other top-level grouping) that \code{data} is from
-#' @param statelabels Character vector of labels corresponding to the levels of \code{geovar}. Defaults to NULL
+#' @param geolabels Character vector of labels corresponding to the levels of \code{geovar}. Defaults to NULL
 #' @param palette Color palette for the levels of \code{geovar} in output plots. Defaults to NULL, in which case a default ggplot2 palette will be used.
 #' @keywords survey
 #' @importFrom magrittr %>%
@@ -49,7 +49,7 @@ cwt_output <- function(
   countryname,
 
   # For visualizations
-  statelabels = NULL, # labels for geovar; use levels in dataset by default
+  geolabels = NULL, # labels for geovar; use levels in dataset by default
   palette = NULL
 ){
 
@@ -133,8 +133,8 @@ cwt_output <- function(
     if(!is.null(yearmsgs)){stop(yearmsgs)}
   }
 
-  ## Check 5: state labels
-  if(!is.null(statelabels)){
+  ## Check 5: subnational area labels
+  if(!is.null(geolabels)){
     check5 <- analysis_data
     check5$yv <- get(yearvar, check5)
 
@@ -144,8 +144,8 @@ cwt_output <- function(
 
     checkgeovar <- get(geovar, check5)
 
-    if(length(unique(checkgeovar)) != length(statelabels)){
-      stop(paste0("The number of levels in ", geovar, " does not match the number of levels provided in the statelabels argument."))}}
+    if(length(unique(checkgeovar)) != length(geolabels)){
+      stop(paste0("The number of levels in ", geovar, " does not match the number of levels provided in the geolabels argument."))}}
 
   ## Check 6: confidence interval variables
   if(ci == TRUE){
@@ -206,7 +206,7 @@ cwt_output <- function(
   # Pre-process data for weights
   weights_data <- data
   weights_data$fn_weight <- get(weightvar, weights_data)
-  weights_data$State <- get(geovar, weights_data)
+  weights_data$Area <- get(geovar, weights_data)
   weights_data$fn_year <- get(yearvar, weights_data)
 
   if(!is.na(agevar)){weights_data$fn_age <- get(agevar, weights_data)}
@@ -230,7 +230,7 @@ cwt_output <- function(
 
   # Create new weight, geo, and year variables using the values provided in the weightvar, geovar, and yearvar arguments to the function
   analysis_data$fn_weight <- get(weightvar, analysis_data)
-  analysis_data$State <- get(geovar, analysis_data)
+  analysis_data$Area <- get(geovar, analysis_data)
   analysis_data$fn_year <- get(yearvar, analysis_data)
 
   # If age is provided for filtering, get age variable
@@ -304,7 +304,7 @@ cwt_output <- function(
 
     target_weights <- y_weights_data %>%
       dplyr::mutate(tot_weight = sum(fn_weight)) %>%
-      dplyr::group_by(State) %>%
+      dplyr::group_by(Area) %>%
       dplyr::summarize(
         SUMWT = sum(fn_weight),
         tot_weight = dplyr::first(tot_weight)
@@ -363,7 +363,7 @@ cwt_output <- function(
       loop_data <- loop_data %>%
         dplyr::mutate(numerator = fn_outcome * fn_weight,
                       denominator = fn_weight) %>%
-        dplyr::group_by(State) %>%
+        dplyr::group_by(Area) %>%
         dplyr::mutate(sumwt_zone = sum(fn_weight)) %>%
         dplyr::ungroup()
 
@@ -434,7 +434,7 @@ cwt_output <- function(
         p_ub <- NA
       }
 
-      loop_data <- dplyr::left_join(loop_data, target_weights, by = "State") %>%
+      loop_data <- dplyr::left_join(loop_data, target_weights, by = "Area") %>%
         dplyr::mutate(poststrwtzone = target * fn_weight/sumwt_zone,
                       numeratorzone = fn_outcome * poststrwtzone)
 
@@ -452,20 +452,20 @@ cwt_output <- function(
       y_outcomes_df[i,8] <- ytc[y]
       y_outcomes_df[i,9] <- wtc[y]
 
-      # Create outcome-by-state
-      loopstate <- loop_data %>%
-        dplyr::group_by(State) %>%
+      # Create outcome-by-area
+      looparea <- loop_data %>%
+        dplyr::group_by(Area) %>%
         dplyr::summarize(proportion = sum(numerator, na.rm = TRUE)/sum(denominator, na.rm = TRUE)) %>%
         dplyr::mutate(year = ytc[y]) %>%
-        dplyr::select(State, year, proportion)
+        dplyr::select(Area, year, proportion)
 
       if(i==1){
-        y_outcomes_by_state <- loopstate
-        names(y_outcomes_by_state) <- c("State", "Year", outcomevars[i])
+        y_outcomes_by_area <- looparea
+        names(y_outcomes_by_area) <- c("Area", "Year", outcomevars[i])
       } else {
-        savenames <- names(y_outcomes_by_state)
-        y_outcomes_by_state$newprop <- loopstate$proportion
-        names(y_outcomes_by_state) <- c(savenames, outcomevars[i])
+        savenames <- names(y_outcomes_by_area)
+        y_outcomes_by_area$newprop <- looparea$proportion
+        names(y_outcomes_by_area) <- c(savenames, outcomevars[i])
       }
 
 
@@ -473,7 +473,7 @@ cwt_output <- function(
 
     if(y==1){
       weight_df <- y_analysis_data %>%
-        dplyr::group_by(State) %>%
+        dplyr::group_by(Area) %>%
         dplyr::summarize(SUMWT = sum(fn_weight)) %>%
         dplyr::mutate(tot_weight = sum(y_analysis_data$fn_weight),
                       Ratio = SUMWT/tot_weight,
@@ -481,7 +481,7 @@ cwt_output <- function(
         dplyr::select(-SUMWT,-tot_weight)
     } else {
       tempwt <- y_analysis_data %>%
-        dplyr::group_by(State) %>%
+        dplyr::group_by(Area) %>%
         dplyr::summarize(SUMWT = sum(fn_weight)) %>%
         dplyr::mutate(tot_weight = sum(y_analysis_data$fn_weight),
                       Ratio = SUMWT/tot_weight,
@@ -498,9 +498,9 @@ cwt_output <- function(
     }
 
     if(y==1){
-      outcomes_by_state <- y_outcomes_by_state
+      outcomes_by_area <- y_outcomes_by_area
     } else {
-      outcomes_by_state <- rbind(outcomes_by_state, y_outcomes_by_state)
+      outcomes_by_area <- rbind(outcomes_by_area, y_outcomes_by_area)
     }
 
   } # end year loop
@@ -588,39 +588,39 @@ cwt_output <- function(
 
   weightplot <- ggplot2::ggplot(data = weight_df,
                                 aes(x = Year, y = Ratio*100)) +
-    ggplot2::geom_path(aes(group = as.factor(State), color = as.factor(State))) +
+    ggplot2::geom_path(aes(group = as.factor(Area), color = as.factor(Area))) +
     # ggplot2::labs(x = "", y = "Estimated % of National Children Aged 12-23m") +
     ggplot2::labs(x = "", y = "Estimated % of Population") +
-    ggplot2::ggtitle(paste0(countryname, " State Weights")) +
-    {if(!is.null(statelabels)) ggplot2::scale_color_manual(values = pal, name = "State",
-                                                           labels = statelabels)} +
-    {if(is.null(statelabels)) ggplot2::scale_color_manual(values = pal, name = "State")} +
+    ggplot2::ggtitle(paste0(countryname, " Subnational Weights")) +
+    {if(!is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "",
+                                                           labels = geolabels)} +
+    {if(is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
     ggplot2::theme_minimal() +
     ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc))
 
-  stateplots <- list()
+  areaplots <- list()
   nationalplots <- list()
   combinedplots <- list()
 
   for(o in 1:length(outcomevars)){
 
-    # State coverage over time (for each outcome)
+    # Subnational coverage over time (for each outcome)
 
-    stateoutcomedata <- outcomes_by_state
-    stateoutcomedata$plotoutcome <- get(outcomevars[o], stateoutcomedata)
+    subnationaloutcomedata <- outcomes_by_area
+    subnationaloutcomedata$plotoutcome <- get(outcomevars[o], subnationaloutcomedata)
 
-    stateplot <- ggplot2::ggplot(data = stateoutcomedata,
-                                 aes(x = Year, y = plotoutcome*100, group = State)) +
-      ggplot2::geom_path(aes(group = as.factor(State), color = as.factor(State))) +
+    areaplot <- ggplot2::ggplot(data = subnationaloutcomedata,
+                                 aes(x = Year, y = plotoutcome*100, group = Area)) +
+      ggplot2::geom_path(aes(group = as.factor(Area), color = as.factor(Area))) +
       ggplot2::labs(x = "", y = "% Coverage") +
-      ggplot2::ggtitle(paste0(countryname, " Coverage by State: ", outcomenames[o])) +
-      {if(!is.null(statelabels)) ggplot2::scale_color_manual(values = pal, name = "State",
-                                                             labels = statelabels)} +
-      {if(is.null(statelabels)) ggplot2::scale_color_manual(values = pal, name = "State")} +
+      ggplot2::ggtitle(paste0(countryname, " Subnational Coverage: ", outcomenames[o])) +
+      {if(!is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "",
+                                                             labels = geolabels)} +
+      {if(is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
       ggplot2::theme_minimal() +
       ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc))
 
-    stateplots[[paste0("state_plot_", outcomevars[o])]] <- stateplot
+    areaplots[[paste0("subnational_plot_", outcomevars[o])]] <- areaplot
 
     # National outcome plot (original and PS)
 
@@ -641,7 +641,7 @@ cwt_output <- function(
     nationalplots[[paste0("national_plot_", outcomevars[o])]] <- nationalplot
 
     combinedplot <- gridExtra::arrangeGrob(
-      grobs = list(weightplot, stateplot, nationalplot),
+      grobs = list(weightplot, areaplot, nationalplot),
       ncol = 1
     )
 
@@ -649,21 +649,21 @@ cwt_output <- function(
 
   }
 
-  if(is.null(statelabels)){
+  if(is.null(geolabels)){
     null_sl <- TRUE
-    statelabels <- NA
+    geolabels <- NA
   } else {
     null_sl <- FALSE
   }
 
-  outcomes_by_state <- outcomes_by_state %>%
+  outcomes_by_area <- outcomes_by_area %>%
     dplyr::mutate(Country = countryname,
-                  StateName = rep(statelabels, length.out = nrow(outcomes_by_state))) %>%
-    dplyr::select(Country, State, StateName, everything())
+                  AreaName = rep(geolabels, length.out = nrow(outcomes_by_area))) %>%
+    dplyr::select(Country, Area, AreaName, everything())
 
   if(null_sl == TRUE){
-    outcomes_by_state <- outcomes_by_state %>%
-      dplyr::select(-StateName)
+    outcomes_by_area <- outcomes_by_area %>%
+      dplyr::select(-AreaName)
   }
 
   # Restore user's original setting for survey.lonely.psu
@@ -672,10 +672,10 @@ cwt_output <- function(
   # Datasets, tables, and plots to return
   list(weightdata = weight_df,
        outcomes = outcomes_df,
-       state_outcomes = outcomes_by_state,
+       subnational_outcomes = outcomes_by_area,
        tables = outlist,
        weight_plot = weightplot,
-       state_outcome_plots = stateplots,
+       subnational_outcome_plots = areaplots,
        national_outcome_plots = nationalplots,
        combined_plots = combinedplots)
 

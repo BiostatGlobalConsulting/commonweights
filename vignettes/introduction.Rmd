@@ -87,7 +87,8 @@ The core function in the commonweights package is called `cwt_output`. It has th
 *stratvar* Variable in the dataset identifying which stratum each respondent belongs to. Used in confidence interval calculations to take survey design into account. Provide if `ci = TRUE`. Defaults to NULL.
 
 *countryname* Character, name of the country (or other top-level grouping) that `data` is from
-statelabels Character vector of labels corresponding to the levels of `geovar`. Defaults to NULL
+
+*geolabels* Character vector of labels corresponding to the levels of `geovar`. Defaults to NULL
 
 *palette* Color palette for the levels of `geovar` in output plots. Defaults to NULL, in which case a default ggplot2 palette will be used.
 
@@ -115,7 +116,7 @@ harmonia <- cwt_output(
   clustvar = "clusterid",
   stratvar = "stratumid",
   countryname = "Harmonia",
-  statelabels = NULL,
+  geolabels = NULL,
   palette = pal
 )
 ```
@@ -138,10 +139,10 @@ kableExtra::kbl(harmonia$weightdata) %>% kableExtra::kable_styling(bootstrap_opt
 kableExtra::kbl(harmonia$outcomes) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
 ```
 
-3. `state_outcomes` contains subnational outcome estimates for each level of `geovar`. Recall that post-stratifying does not affect outcome estimates at this lower level -- it only impacts how the subnational estimates are aggregated to produce a national estimate. So, there are no "original" and "post-stratified" outcome estimates in this table. 
+3. `subnational_outcomes` contains subnational outcome estimates for each level of `geovar`. Recall that post-stratifying does not affect outcome estimates at this lower level -- it only impacts how the subnational estimates are aggregated to produce a national estimate. So, there are no "original" and "post-stratified" outcome estimates in this table. 
 
 ```{r output3, echo = FALSE}
-kableExtra::kbl(harmonia$state_outcomes) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+kableExtra::kbl(harmonia$subnational_outcomes) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
 ```
 
 4. `tables` is a list containing a data frame for each outcome specified. Each row represents a survey pair, and contains original and post-stratified outcome estimates for both years in the survey pair, as well as calculations of relative difference due to state weights (RDSW) and difference-in-differences. `tables` also contains an openxlsx Worksheet object called `excel`, which is ready to export as a spreadsheet; more on that below. 
@@ -174,12 +175,12 @@ The Excel spreadsheet will have a tab for each outcome.
 harmonia$weight_plot
 ```
 
-6. `state_outcome_plots` is a list of plots, each showing outcomes in each geographic area over time. 
+6. `subnational_outcome_plots` is a list of plots, each showing outcomes in each geographic area over time. 
 
 For example, to look at the plot for DPT3 coverage by district: 
 
 ```{r output6, fig.width=5}
-harmonia$state_outcome_plots$state_plot_dpt3_vx
+harmonia$subnational_outcome_plots$subnational_plot_dpt3_vx
 ```
 
 7. `national_outcome_plots` is a list of plots, each showing original and post-stratified outcomes over time. 
@@ -201,7 +202,7 @@ grid::grid.draw(harmonia$combined_plots$combined_plot_dpt3_vx)
 ```{r output8b, echo = FALSE, fig.width=6, fig.height=12}
 gridExtra::grid.arrange(
   grobs = list(harmonia$weight_plot, 
-               harmonia$state_outcome_plots$state_plot_dpt3_vx, 
+               harmonia$subnational_outcome_plots$subnational_plot_dpt3_vx, 
                harmonia$national_outcome_plots$national_plot_dpt3_vx),
   ncol = 1
 )
