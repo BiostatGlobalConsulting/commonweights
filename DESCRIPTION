@@ -1,6 +1,6 @@
 Package: commonweights
 Title: Calculate the Effects of Changes in Subnational Survey Weights
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(person("Caitlin", "Clary", email = "caitlin.clary@biostatglobal.com",
            role = c("aut", "cre")), 
            person(given = "Shiraz", family = "Johnson", email = "johnsons2@grinnell.edu", 
