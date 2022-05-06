@@ -44,7 +44,7 @@ We'll use an example dataset with three survey samples from the imaginary countr
 data("fauxdata")
 ```
 
-The dataset includes samples from 2005, 2010, and 2015. In addition to the year variable, the dataset has stratum and cluster IDs, a variable indicating the child's age in years, the `psweight` variable which shows each child's survey weight (the number of children in the population represented by this respondent), and three dichotomous variables: possession of a vaccination card, vaccination with DTP3, and vaccination with MCV1. 
+The dataset includes samples from 2005, 2010, and 2015. In addition to the year variable, the dataset has stratum and cluster IDs, a variable indicating the child's age in years, the `psweight` variable which shows each child's survey weight (the number of children in the population represented by this respondent), and three dichotomous variable: possession of a vaccination card, vaccination with DPT3, and vaccination with MCV1. 
 
 Here are the first few rows of the faux dataset: 
 
@@ -58,9 +58,9 @@ The core function in the commonweights package is called `cwt_output`. It has th
 
 *data* Dataset to analyze. Should have one row per respondent and contain survey data from at least two years.
 
-*outcomevars* Names of dichotomous outcome variable(s) coded 0/1/NA. Provide as a single variable name e.g. "dtp3_vx" or as multiple variables in a concatenated list, e.g. c("dtp3_vx", "mcv1_vx")
+*outcomevars* Names of dichotomous outcome variable(s) coded 0/1/NA. Provide as a single variable name e.g. "dpt3_vx" or as multiple variables in a concatenated list, e.g. c("dpt3_vx", "mcv1_vx")
 
-*outcomenames* Names of the outcomes in `outcomevars` to use in tables and plots; must be the same length as `outcomevars`. Optional, defaults to NULL. E.g. c("DTP3", "MCV1")
+*outcomenames* Names of the outcomes in `outcomevars` to use in tables and plots; must be the same length as `outcomevars`. Optional, defaults to NULL. E.g. c("DPT3", "MCV1")
 
 *geovar* Name of geography variable in `data`. Must have the same levels across all years in `years`.
 
@@ -102,8 +102,8 @@ pal <- c("#f7abc1", "#a2d3fa", "#69c9c8", "#f1cfa1", "#a33c51",
 ```{r harmonia, message = FALSE}
 harmonia <- cwt_output(
   data = fauxdata,
-  outcomevars = c("has_card", "dtp3_vx", "mcv_vx"),
-  outcomenames = c("Vaccination Card", "DTP3", "MCV1"),
+  outcomevars = c("has_card", "dpt3_vx", "mcv_vx"),
+  outcomenames = c("Vaccination Card", "DPT3", "MCV1"),
   geovar = "geo",
   yearvar = "year",
   weightvar = "psweight",
@@ -154,11 +154,11 @@ cat(names(harmonia$tables), sep="\n")
 You can view the individual data frames with syntax like: 
 
 ```{r output4b, eval = FALSE}
-harmonia$tables$Harmonia_dtp3_vx_table
+harmonia$tables$Harmonia_dpt3_vx_table
 ```
 
 ```{r output4c, echo = FALSE}
-kableExtra::kbl(harmonia$tables$Harmonia_dtp3_vx_table)%>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+kableExtra::kbl(harmonia$tables$Harmonia_dpt3_vx_table)%>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
 ```
 
 You can save the Excel object - basically, formatted versions of the individual outcome tables - with syntax like the following: 
@@ -177,10 +177,10 @@ harmonia$weight_plot
 
 6. `subnational_outcome_plots` is a list of plots, each showing outcomes in each geographic area over time. 
 
-For example, to look at the plot for DTP3 coverage by district: 
+For example, to look at the plot for DPT3 coverage by district: 
 
 ```{r output6, fig.width=5}
-harmonia$subnational_outcome_plots$subnational_plot_dtp3_vx
+harmonia$subnational_outcome_plots$subnational_plot_dpt3_vx
 ```
 
 7. `national_outcome_plots` is a list of plots, each showing original and post-stratified outcomes over time. 
@@ -196,14 +196,14 @@ harmonia$national_outcome_plots$national_plot_mcv_vx
 You can display these plots with `grid::grid.draw` to view in an R session: 
 
 ```{r output8a, eval = FALSE}
-grid::grid.draw(harmonia$combined_plots$combined_plot_dtp3_vx)
+grid::grid.draw(harmonia$combined_plots$combined_plot_dpt3_vx)
 ```
 
 ```{r output8b, echo = FALSE, fig.width=6, fig.height=12}
 gridExtra::grid.arrange(
   grobs = list(harmonia$weight_plot, 
-               harmonia$subnational_outcome_plots$subnational_plot_dtp3_vx, 
-               harmonia$national_outcome_plots$national_plot_dtp3_vx),
+               harmonia$subnational_outcome_plots$subnational_plot_dpt3_vx, 
+               harmonia$national_outcome_plots$national_plot_dpt3_vx),
   ncol = 1
 )
 ```
@@ -211,8 +211,8 @@ gridExtra::grid.arrange(
 Or you can save the combined plots with ggsave: 
 
 ```{r output8c,eval= FALSE}
-ggplot2::ggsave("CombinedPlotDTP3.png"
-       harmonia$combined_plots$combined_plot_dtp3_vx, 
+ggplot2::ggsave("CombinedPlotDPT3.png"
+       harmonia$combined_plots$combined_plot_dpt3_vx, 
        height = 12, width = 6, units = "in")
 ```
 
