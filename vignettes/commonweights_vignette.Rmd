@@ -1,10 +1,15 @@
 ---
 title: "Vignette: commonweights package"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{introduction}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+author: Biostat Global Consulting
+output: 
+  rmarkdown::pdf_document:
+    df_print: kable
+fontsize: 12pt
+geometry: margin=0.5in
+header-includes: 
+  \usepackage{float}
+  \usepackage{helvet}
+  \renewcommand{\familydefault}{\sfdefault}
 ---
 
 ```{r, include = FALSE}
@@ -26,8 +31,8 @@ library(kableExtra)
 The easiest way to use the `commonweights` package is to install it directly from GitHub: 
 
 ```{r install, eval = FALSE}
-if(!requireNamespace("remotes")){install.packages("remotes")}
-remotes::install_github("BiostatGlobalConsulting/commonweights")
+if (!requireNamespace("pak")){install.packages("pak")}
+pak::pkg_install("BiostatGlobalConsulting/commonweights")
 ```
 
 Once the package is installed, load it: 
@@ -49,7 +54,9 @@ The dataset includes samples from 2005, 2010, and 2015. In addition to the year 
 Here are the first few rows of the faux dataset: 
 
 ```{r datahead, echo=FALSE}
-kableExtra::kbl(head(fauxdata)) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+kableExtra::kbl(head(fauxdata), digits = 1) %>% 
+  kableExtra::kable_styling(latex_options = "HOLD_position",
+                            font_size = 8)
 ```
 
 ## Using the cwt_output function
@@ -58,9 +65,9 @@ The core function in the commonweights package is called `cwt_output`. It has th
 
 *data* Dataset to analyze. Should have one row per respondent and contain survey data from at least two years.
 
-*outcomevars* Names of dichotomous outcome variable(s) coded 0/1/NA. Provide as a single variable name e.g. "dtp3_vx" or as multiple variables in a concatenated list, e.g. c("dtp3_vx", "mcv1_vx")
+*outcomevars* Names of dichotomous outcome variable(s) coded `0/1/NA`. Provide as a single variable name e.g. `"dtp3_vx"` or as multiple variables in a concatenated list, e.g. `c("dtp3_vx", "mcv1_vx")`
 
-*outcomenames* Names of the outcomes in `outcomevars` to use in tables and plots; must be the same length as `outcomevars`. Optional, defaults to NULL. E.g. c("DTP3", "MCV1")
+*outcomenames* Names of the outcomes in `outcomevars` to use in tables and plots; must be the same length as `outcomevars`. Optional, defaults to NULL. E.g. `c("DTP3", "MCV1")`
 
 *geovar* Name of geography variable in `data`. Must have the same levels across all years in `years`.
 
@@ -68,9 +75,9 @@ The core function in the commonweights package is called `cwt_output`. It has th
 
 *weightvar* Variable in dataset containing survey weights for each respondent
 
-*years* Data years to analyze. Defaults to "all", which will analyse all years in `yearvar`. To analyze a subset of years, provide a vector of years to include, e.g. c(2000, 2005, 2010)
+*years* Data years to analyze. Defaults to `"all"`, which will analyse all years in `yearvar`. To analyze a subset of years, provide a vector of years to include, e.g. `c(2000, 2005, 2010)`
 
-*weightopt* Which year(s) to use as common weights. "earliest" will calculate outcomes post-stratified to the earliest year in `years`. "previous" will calculate outcomes for each survey year using the weights from the previous survey year. "custom" allows the user to select a year to use weights from.
+*weightopt* Which year(s) to use as common weights. `"earliest"` will calculate outcomes post-stratified to the earliest year in `years`. `"previous"` will calculate outcomes for each survey year using the weights from the previous survey year. `"custom"` allows the user to select a year to use weights from.
 
 *weightyear* Year to use for post-stratifying if `weightopt = "custom"`
 
@@ -130,19 +137,27 @@ cat(names(harmonia), sep="\n")
 1. `weightdata` is a data frame showing the relative weight for each level of the `geo` variable for each year in the dataset. This table is the basis for the visualization of weights over time in the `weight_plot` output. 
 
 ```{r output1, echo = FALSE}
-kableExtra::kbl(harmonia$weightdata) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+kableExtra::kbl(harmonia$weightdata, digits = 3) %>% 
+  kableExtra::kable_styling(latex_options = "HOLD_position",
+                            font_size = 8)
 ```
 
 2. `outcomes` is a data frame that contains, for each outcome and each year specified in the function call, the point estimate using original weights (`Outcome_Original`), a survey-adjusted Wilson confidence interval for that point estimate (`CI_LB_Original` and `CI_UB_Original`), and the point estimate when weights are post-stratified. 
 
+Note that confidence intervals may be too narrow if the weights you are post-stratifying to are *estimated* totals rather than population values. See Jill Dever & Richard Valliant (2010), "A comparison of variance estimators for poststratification to estimated control totals," Survey Methodology, 36(1), 45-56. 
+
 ```{r output2, echo=FALSE}
-kableExtra::kbl(harmonia$outcomes) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+kableExtra::kbl(harmonia$outcomes, digits = 1) %>% 
+  kableExtra::kable_styling(latex_options = "HOLD_position",
+                            font_size = 8)
 ```
 
 3. `subnational_outcomes` contains subnational outcome estimates for each level of `geovar`. Recall that post-stratifying does not affect outcome estimates at this lower level -- it only impacts how the subnational estimates are aggregated to produce a national estimate. So, there are no "original" and "post-stratified" outcome estimates in this table. 
 
 ```{r output3, echo = FALSE}
-kableExtra::kbl(harmonia$subnational_outcomes) %>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+kableExtra::kbl(harmonia$subnational_outcomes, digits = 1) %>% 
+  kableExtra::kable_styling(latex_options = "HOLD_position",
+                            font_size = 8)
 ```
 
 4. `tables` is a list containing a data frame for each outcome specified. Each row represents a survey pair, and contains original and post-stratified outcome estimates for both years in the survey pair, as well as calculations of relative difference due to state weights (RDSW) and difference-in-differences. `tables` also contains an openxlsx Worksheet object called `excel`, which is ready to export as a spreadsheet; more on that below. 
@@ -158,7 +173,17 @@ harmonia$tables$Harmonia_dtp3_vx_table
 ```
 
 ```{r output4c, echo = FALSE}
-kableExtra::kbl(harmonia$tables$Harmonia_dtp3_vx_table)%>% kableExtra::kable_styling(bootstrap_options = c("hover", "condensed"))
+# kableExtra::kbl(harmonia$tables$Harmonia_dtp3_vx_table, digits = 1) %>% 
+#   kableExtra::kable_styling(latex_options = "HOLD_position",
+#                             font_size = 8)
+
+kableExtra::kbl(harmonia$tables$Harmonia_dtp3_vx_table[,1:7], digits = 1) %>% 
+  kableExtra::kable_styling(latex_options = "HOLD_position",
+                            font_size = 8)
+
+kableExtra::kbl(harmonia$tables$Harmonia_dtp3_vx_table[,8:ncol(harmonia$tables$Harmonia_dtp3_vx_table)], digits = 1) %>% 
+  kableExtra::kable_styling(latex_options = "HOLD_position",
+                            font_size = 8)
 ```
 
 You can save the Excel object - basically, formatted versions of the individual outcome tables - with syntax like the following: 
