@@ -19,8 +19,15 @@
 #' @param countryname Character, name of the country (or other top-level grouping) that \code{data} is from
 #' @param geolabels Character vector of labels corresponding to the levels of \code{geovar}. Defaults to NULL
 #' @param palette Color palette for the levels of \code{geovar} in output plots. Defaults to NULL, in which case a default ggplot2 palette will be used.
-#' @keywords survey
 #' @importFrom magrittr %>%
+#' @import survey
+#' @import dplyr
+#' @import openxlsx
+#' @import tidyr
+#' @import ggplot2
+#' @import grid
+#' @import gridExtra
+#' @import cli
 #' @export
 #' @examples
 #' cwt_output()
@@ -61,117 +68,121 @@ cwt_output <- function(
   # Check 1: all required variables are present in the dataset
   variable_messages <- NULL
 
-  if(!geovar %in% names(analysis_data)){
-    variable_messages <- c(variable_messages,
-                           paste0("Cannot find a variable called ", geovar,
-                                  " in ", deparse(substitute(data)), ".\n"))
+  if (!geovar %in% names(analysis_data)){
+    variable_messages <- c(
+      variable_messages,
+      paste0("Cannot find a variable called ", geovar,
+             " in ", deparse(substitute(data)), ".\n"))
   }
 
-  if(!yearvar %in% names(analysis_data)){
-    variable_messages <- c(variable_messages,
-                           paste0("Cannot find a variable called ", yearvar,
-                                  " in ", deparse(substitute(data)), ".\n"))
+  if (!yearvar %in% names(analysis_data)){
+    variable_messages <- c(
+      variable_messages,
+      paste0("Cannot find a variable called ", yearvar,
+             " in ", deparse(substitute(data)), ".\n"))
   }
 
-  if(!weightvar %in% names(analysis_data)){
+  if (!weightvar %in% names(analysis_data)){
     variable_messages <- c(variable_messages,
                            paste0("Cannot find a variable called ", weightvar,
                                   " in ", deparse(substitute(data)), ".\n"))
   }
 
-  if(!is.na(agevar)){
-    if(!agevar %in% names(analysis_data)){
-      variable_messages <- c(variable_messages,
-                             paste0("Cannot find a variable called ", agevar,
-                                    " in ", deparse(substitute(data)), ".\n"))
+  if (!is.na(agevar)){
+    if (!agevar %in% names(analysis_data)){
+      variable_messages <- c(
+        variable_messages,
+        paste0("Cannot find a variable called ", agevar,
+               " in ", deparse(substitute(data)), ".\n"))
     }}
 
   for(i in 1:length(outcomevars)){
-    if(!outcomevars[i] %in% names(analysis_data)){
-      variable_messages <- c(variable_messages,
-                             paste0("Cannot find a variable called ", outcomevars[i],
-                                    " in ", deparse(substitute(data)), ".\n"))
+    if (!outcomevars[i] %in% names(analysis_data)){
+      variable_messages <- c(
+        variable_messages,
+        paste0("Cannot find a variable called ", outcomevars[i],
+               " in ", deparse(substitute(data)), ".\n"))
     }
   }
 
-  if(!is.null(variable_messages)){
-    stop(variable_messages)
+  if (!is.null(variable_messages)){
+    cli::cli_abort(variable_messages)
   }
 
   ## Check 2: weightopt and weightyear
-  if(weightopt == "custom" & is.null(weightyear)){
-    stop("weightopt = 'custom' option selected, but no weight year provided.")
+  if (weightopt == "custom" & is.null(weightyear)){
+    cli::cli_abort("weightopt = 'custom' option selected, but no weight year provided.")
   }
-  if(!is.null(weightyear) & weightopt != "custom"){
-    stop(paste0('To weight to the year ', weightyear, ' you must select weightopt = "custom"'))
+  if (!is.null(weightyear) & weightopt != "custom"){
+    cli::cli_abort(paste0('To weight to the year ', weightyear, ' you must select weightopt = "custom"'))
   }
-  if(!is.null(weightyear)){
+  if (!is.null(weightyear)){
     checkyear <- get(yearvar, analysis_data)
-    if(length(checkyear[checkyear == weightyear])==0){
-      stop(paste0('Cannot calculate weights from year ', weightyear, ' because no data from that year is in ', deparse(substitute(data))))
+    if (length(checkyear[checkyear == weightyear])==0){
+      cli::cli_abort(paste0('Cannot calculate weights from year ', weightyear, ' because no data from that year is in ', deparse(substitute(data))))
     }
   }
 
   ## Check 3: if age is provided, agevar should be
-  if(!is.null(age) & is.na(agevar)){
-    stop("In order to filter by age, the variable containing age in the dataset must be provided in the agevar argument.")
+  if (!is.null(age) & is.na(agevar)){
+    cli::cli_abort("In order to filter by age, the variable containing age in the dataset must be provided in the agevar argument.")
   }
-  if(!is.na(agevar) & is.null(age)){
-    warning("An age variable (agevar) was provided, but no age to filter by was given in the age argument.")
+  if (!is.na(agevar) & is.null(age)){
+    cli::cli_warn("An age variable (agevar) was provided, but no age to filter by was given in the age argument.")
   }
 
   ## Check 4: years
-  if(any(years != "all")){ # if(years != "all")
+  if (any(years != "all")){ # if (years != "all")
     checkyear <- get(yearvar, analysis_data)
     yearmsgs <- NULL
     for(y in 1:length(years)){
       cy <- length(checkyear[checkyear==years[y]])
-      if(cy==0){
+      if (cy==0){
         yearmsgs <- c(yearmsgs, paste0("No data from year ", years[y], " is present in ", deparse(substitute(data)), ".\n"))
       }
     }
-    if(!is.null(yearmsgs)){stop(yearmsgs)}
+    if (!is.null(yearmsgs)){cli::cli_abort(yearmsgs)}
   }
 
   ## Check 5: subnational area labels
-  if(!is.null(geolabels)){
+  if (!is.null(geolabels)){
     check5 <- analysis_data
     check5$yv <- get(yearvar, check5)
 
-    if(any(years != "all")){
+    if (any(years != "all")){
       check5 <- check5 %>%
         dplyr::filter(yv %in% years)}
 
     checkgeovar <- get(geovar, check5)
 
-    if(length(unique(checkgeovar)) != length(geolabels)){
-      stop(paste0("The number of levels in ", geovar, " does not match the number of levels provided in the geolabels argument."))}}
+    if (length(unique(checkgeovar)) != length(geolabels)){
+      cli::cli_abort(paste0("The number of levels in ", geovar, " does not match the number of levels provided in the geolabels argument."))}}
 
   ## Check 6: confidence interval variables
-  if(ci == TRUE){
+  if (ci == TRUE){
     ci_message <- NULL
 
-    if(is.null(clustvar)){
+    if (is.null(clustvar)){
       ci_message <- c(ci_message, "Cluster ID variable (clustvar) must be provided to calculate a confidence interval\n")
     }
 
-    if(is.null(stratvar)){
+    if (is.null(stratvar)){
       ci_message <- c(ci_message, "Stratum ID variable (stratvar) must be provided to calculate a confidence interval\n")
     }
 
     # Stop here if stratvar or clustvar is not specified at all
-    if(!is.null(ci_message)){
-      stop(ci_message)
+    if (!is.null(ci_message)){
+      cli::cli_abort(ci_message)
     }
 
-    if(!clustvar %in% names(analysis_data)){
+    if (!clustvar %in% names(analysis_data)){
       ci_message <- c(ci_message,
                       paste0("Cannot find a variable called ", clustvar, " in ",
                              deparse(substitute(data)),
                              ". Cluster ID variable required to calculate a confidence interval.\n"))
     }
 
-    if(!stratvar %in% names(analysis_data)){
+    if (!stratvar %in% names(analysis_data)){
       ci_message <- c(ci_message,
                       paste0("Cannot find a variable called ", stratvar, " in ",
                              deparse(substitute(data)),
@@ -179,27 +190,27 @@ cwt_output <- function(
     }
 
     # Stop here if stratvar or clustvar is not in the dataset
-    if(!is.null(ci_message)){
-      stop(ci_message)
+    if (!is.null(ci_message)){
+      cli::cli_abort(ci_message)
     }
   }
 
-  if(ci == TRUE){
-    if(cilevel >= 1 | cilevel <= 0){
-      stop("Confidence level must be between 0 and 1.")
+  if (ci == TRUE){
+    if (cilevel >= 1 | cilevel <= 0){
+      cli::cli_abort("Confidence level must be between 0 and 1.")
     }
   }
 
   ## Check 7: outcome variable labels same length as outcomevars
-  if(!is.null(outcomenames)){
-    if(length(outcomenames) != length(outcomevars)){
-      warning("Outcome name vector is not the same length as the outcome variables vector. Ignoring outcomenames in this run.")
+  if (!is.null(outcomenames)){
+    if (length(outcomenames) != length(outcomevars)){
+      cli::cli_warn("Outcome name vector is not the same length as the outcome variables vector. Ignoring outcomenames in this run.")
       outcomenames <- NULL
     }
   }
 
   # If outcomenames not provided or not valid, use outcomevars as names
-  if(is.null(outcomenames)){outcomenames <- outcomevars}
+  if (is.null(outcomenames)){outcomenames <- outcomevars}
 
   ## Data processing ----
 
@@ -209,22 +220,22 @@ cwt_output <- function(
   weights_data$Area <- get(geovar, weights_data)
   weights_data$fn_year <- get(yearvar, weights_data)
 
-  if(!is.na(agevar)){weights_data$fn_age <- get(agevar, weights_data)}
+  if (!is.na(agevar)){weights_data$fn_age <- get(agevar, weights_data)}
 
   # Filter data by age if user provided age/agevar
-  if(!is.na(agevar) & !is.null(age)){
+  if (!is.na(agevar) & !is.null(age)){
 
-    if(length(age) == 1){
+    if (length(age) == 1){
       weights_data <- dplyr::filter(weights_data,
                              fn_age %in% age)
-    } else if(length(age) == 2){
+    } else if (length(age) == 2){
       agemin <- min(age)
       agemax <- max(age)
 
       weights_data <- dplyr::filter(weights_data,
                              fn_age <= agemax, fn_age >= agemin)
     } else {
-      stop("The age argument can have one or two values")
+      cli::cli_abort("The age argument can have one or two values")
     }
   }
 
@@ -234,16 +245,16 @@ cwt_output <- function(
   analysis_data$fn_year <- get(yearvar, analysis_data)
 
   # If age is provided for filtering, get age variable
-  if(!is.na(agevar)){analysis_data$fn_age <- get(agevar, analysis_data)}
+  if (!is.na(agevar)){analysis_data$fn_age <- get(agevar, analysis_data)}
 
   # Filter data by age if user provided age/agevar
-  if(!is.na(agevar) & !is.null(age)){
+  if (!is.na(agevar) & !is.null(age)){
 
-    if(length(age) == 1){
+    if (length(age) == 1){
       analysis_data <- dplyr::filter(analysis_data,
                                      fn_age %in% age)}
 
-    if(length(age) == 2){
+    if (length(age) == 2){
       agemin <- min(age)
       agemax <- max(age)
 
@@ -253,7 +264,7 @@ cwt_output <- function(
   }
 
   # Get stratum and cluster ID variables if CI to be calculated
-  if(ci == TRUE){
+  if (ci == TRUE){
     analysis_data$fn_clust <- get(clustvar, analysis_data)
     analysis_data$fn_strat <- get(stratvar, analysis_data)
 
@@ -266,8 +277,8 @@ cwt_output <- function(
   options(survey.lonely.psu="adjust")
 
   # Define years to do calculations for (ytc)
-  if(length(years)==1){
-    if(years == "all"){
+  if (length(years)==1){
+    if (years == "all"){
       ytc <- unique(analysis_data$fn_year)
     } else {
       ytc <- years
@@ -276,20 +287,20 @@ cwt_output <- function(
     ytc <- years
   }
 
-  if(weightopt == "earliest"){
+  if (weightopt == "earliest"){
     wtc <- rep(dplyr::first(ytc), length(ytc))
-  } else if(weightopt == "previous"){
-    if(length(ytc > 1)){
+  } else if (weightopt == "previous"){
+    if (length(ytc > 1)){
       wtc <- c(dplyr::first(ytc), ytc[1:length(ytc)-1])
     } else {
       wtc <- dplyr::first(ytc)
     }
-  } else if(weightopt == "custom"){
-    if(!is.null(weightyear)){
+  } else if (weightopt == "custom"){
+    if (!is.null(weightyear)){
       wtc <- rep(weightyear, length(ytc))
     } else {
       ## This is redundant; check is done above
-      stop("Weight option is 'custom', but weightyear argument was not provided.")
+      cli::cli_abort("Weight option is 'custom', but weightyear argument was not provided.")
     }
   }
 
@@ -335,14 +346,14 @@ cwt_output <- function(
       loop_data$fn_outcome <- get(outcomevars[i], y_analysis_data)
 
       # Confidence interval: calculations for DF
-      if(ci == TRUE){
+      if (ci == TRUE){
 
         ## Are clusters unique across strata or only within strata?
         cs_vector <- paste0(loop_data$fn_strat, loop_data$fn_clust)
 
         ## If not unique across strata, create a new clustvar
         #  as a combination of stratum and cluster IDs
-        if(length(unique(cs_vector)) > length(unique(loop_data$fn_clust))){
+        if (length(unique(cs_vector)) > length(unique(loop_data$fn_clust))){
           loop_data <- loop_data %>%
             dplyr::mutate(
               orig_clustvar = fn_clust,
@@ -368,10 +379,10 @@ cwt_output <- function(
         dplyr::ungroup()
 
       # Confidence interval - Wilson CI calculations
-      if(ci == TRUE){
+      if (ci == TRUE){
 
         # Check: any missing values in strata or cluster?
-        if(nrow(loop_data[is.na(loop_data$fn_strat),]) > 0 |
+        if (nrow(loop_data[is.na(loop_data$fn_strat),]) > 0 |
            nrow(loop_data[is.na(loop_data$fn_clust),]) > 0){
 
           p_lb <- NA
@@ -379,17 +390,17 @@ cwt_output <- function(
 
           warnmsg <- ""
 
-          if(nrow(loop_data[is.na(loop_data$fn_strat),]) > 0){
+          if (nrow(loop_data[is.na(loop_data$fn_strat),]) > 0){
             warnmsg <- c(warnmsg, paste0("Missing values in ", deparse(substitute(stratvar)), ".\n"))
           }
 
-          if(nrow(loop_data[is.na(loop_data$fn_clust),]) > 0){
+          if (nrow(loop_data[is.na(loop_data$fn_clust),]) > 0){
             warnmsg <- c(warnmsg, paste0("Missing values in ", deparse(substitute(clustvar)), ".\n"))
           }
 
           # Only print warning message if i = 1 (don't repeat warning for each outcome)
-          if(i==1){
-            warning(paste0(warnmsg, "Confidence intervals could not be calculated for year ", ytc[y], ". "))}
+          if (i==1){
+            cli::cli_warn(paste0(warnmsg, "Confidence intervals could not be calculated for year ", ytc[y], ". "))}
         } else {
 
           # Define a survey design object
@@ -410,7 +421,7 @@ cwt_output <- function(
 
           se_j <- as.numeric(survey::SE(pcalc))
 
-          if(se_j < 1e-15){
+          if (se_j < 1e-15){
             neff_dp <- nrow(loop_data)
           } else {
             neff_dp <- p_j*(1-p_j)/(se_j^2)
@@ -459,7 +470,7 @@ cwt_output <- function(
         dplyr::mutate(year = ytc[y]) %>%
         dplyr::select(Area, year, proportion)
 
-      if(i==1){
+      if (i==1){
         y_outcomes_by_area <- looparea
         names(y_outcomes_by_area) <- c("Area", "Year", outcomevars[i])
       } else {
@@ -471,7 +482,7 @@ cwt_output <- function(
 
     } # End outcome loop
 
-    if(y==1){
+    if (y==1){
       weight_df <- y_analysis_data %>%
         dplyr::group_by(Area) %>%
         dplyr::summarize(SUMWT = sum(fn_weight)) %>%
@@ -491,13 +502,13 @@ cwt_output <- function(
       weight_df <- rbind(weight_df, tempwt)
     }
 
-    if(y==1){
+    if (y==1){
       outcomes_df <- y_outcomes_df
     } else {
       outcomes_df <- dplyr::bind_rows(outcomes_df, y_outcomes_df)
     }
 
-    if(y==1){
+    if (y==1){
       outcomes_by_area <- y_outcomes_by_area
     } else {
       outcomes_by_area <- rbind(outcomes_by_area, y_outcomes_by_area)
@@ -592,9 +603,9 @@ cwt_output <- function(
     # ggplot2::labs(x = "", y = "Estimated % of National Children Aged 12-23m") +
     ggplot2::labs(x = "", y = "Estimated % of Population") +
     ggplot2::ggtitle(paste0(countryname, " Subnational Weights")) +
-    {if(!is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "",
+    {if (!is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "",
                                                            labels = geolabels)} +
-    {if(is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
+    {if (is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
     ggplot2::theme_minimal() +
     ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc))
 
@@ -614,9 +625,9 @@ cwt_output <- function(
       ggplot2::geom_path(aes(group = as.factor(Area), color = as.factor(Area))) +
       ggplot2::labs(x = "", y = "% Coverage") +
       ggplot2::ggtitle(paste0(countryname, " Subnational Coverage: ", outcomenames[o])) +
-      {if(!is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "",
+      {if (!is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "",
                                                              labels = geolabels)} +
-      {if(is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
+      {if (is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
       ggplot2::theme_minimal() +
       ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc))
 
@@ -649,7 +660,7 @@ cwt_output <- function(
 
   }
 
-  if(is.null(geolabels)){
+  if (is.null(geolabels)){
     null_sl <- TRUE
     geolabels <- NA
   } else {
@@ -661,7 +672,7 @@ cwt_output <- function(
                   AreaName = rep(geolabels, length.out = nrow(outcomes_by_area))) %>%
     dplyr::select(Country, Area, AreaName, everything())
 
-  if(null_sl == TRUE){
+  if (null_sl == TRUE){
     outcomes_by_area <- outcomes_by_area %>%
       dplyr::select(-AreaName)
   }
@@ -678,5 +689,9 @@ cwt_output <- function(
        subnational_outcome_plots = areaplots,
        national_outcome_plots = nationalplots,
        combined_plots = combinedplots)
+
+  if (ci %in% TRUE){
+    cli::cli_warn('Note that confidence intervals calculated by this package do not take into account the additional variability introduced when post-stratifying to survey-estimated totals (rather than population values).\n\nFor additional context, see: Jill Dever & Richard Valliant (2010), "A comparison of variance estimators for poststratification to estimated control totals," Survey Methodology, 36(1), 45-56. ')
+  }
 
 }

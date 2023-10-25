@@ -21,7 +21,7 @@ cwt_output(
   clustvar = NULL,
   stratvar = NULL,
   countryname,
-  statelabels = NULL,
+  geolabels = NULL,
   palette = NULL
 )
 }
@@ -58,14 +58,13 @@ cwt_output(
 
 \item{countryname}{Character, name of the country (or other top-level grouping) that \code{data} is from}
 
-\item{statelabels}{Character vector of labels corresponding to the levels of \code{geovar}. Defaults to NULL}
+\item{geolabels}{Character vector of labels corresponding to the levels of \code{geovar}. Defaults to NULL}
 
 \item{palette}{Color palette for the levels of \code{geovar} in output plots. Defaults to NULL, in which case a default ggplot2 palette will be used.}
 }
 \description{
-Analyze multiple survey datasets: calculate changes in state weights over time, post-stratify to specified year(s), produce tables and plots
+Analyze multiple survey datasets: calculate changes in subnational weights over time, post-stratify to specified year(s), produce tables and plots
 }
 \examples{
 cwt_output()
 }
-\keyword{survey}
