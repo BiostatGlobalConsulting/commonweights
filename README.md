@@ -4,6 +4,6 @@ Package to analyze multiple survey datasets, calculating changes in subnational 
 You can install this package from GitHub using the following: 
 
 ``` r
-if(!requireNamespace("remotes")){install.packages("remotes")}
-remotes::install_github("BiostatGlobalConsulting/commonweights")
+if (!requireNamespace("pak")){install.packages("pak")}
+pak::pkg_install("BiostatGlobalConsulting/commonweights")
 ```
