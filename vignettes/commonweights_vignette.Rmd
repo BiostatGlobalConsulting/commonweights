@@ -144,7 +144,7 @@ kableExtra::kbl(harmonia$weightdata, digits = 3) %>%
 
 2. `outcomes` is a data frame that contains, for each outcome and each year specified in the function call, the point estimate using original weights (`Outcome_Original`), a survey-adjusted Wilson confidence interval for that point estimate (`CI_LB_Original` and `CI_UB_Original`), and the point estimate when weights are post-stratified. 
 
-Note that confidence intervals may be too narrow if the weights you are post-stratifying to are *estimated* totals rather than population values. See Jill Dever & Richard Valliant (2010), "A comparison of variance estimators for poststratification to estimated control totals," Survey Methodology, 36(1), 45-56. 
+Note that confidence intervals calculated by this package do not take into account the additional variability introduced when post-stratifying to survey-estimated totals (rather than population values). For additional context, see: Jill Dever & Richard Valliant (2010), "A comparison of variance estimators for poststratification to estimated control totals," Survey Methodology, 36(1), 45-56. 
 
 ```{r output2, echo=FALSE}
 kableExtra::kbl(harmonia$outcomes, digits = 1) %>% 
