@@ -680,6 +680,10 @@ cwt_output <- function(
   # Restore user's original setting for survey.lonely.psu
   options(survey.lonely.psu = paste(save_user_survey_option))
 
+    if (ci %in% TRUE){
+    cli::cli_warn('Note that confidence intervals calculated by this package do not take into account the additional variability introduced when post-stratifying to survey-estimated totals (rather than population values).\n\nFor additional context, see: Jill Dever & Richard Valliant (2010), "A comparison of variance estimators for poststratification to estimated control totals," Survey Methodology, 36(1), 45-56. ')
+  }
+  
   # Datasets, tables, and plots to return
   list(weightdata = weight_df,
        outcomes = outcomes_df,
@@ -690,8 +694,6 @@ cwt_output <- function(
        national_outcome_plots = nationalplots,
        combined_plots = combinedplots)
 
-  if (ci %in% TRUE){
-    cli::cli_warn('Note that confidence intervals calculated by this package do not take into account the additional variability introduced when post-stratifying to survey-estimated totals (rather than population values).\n\nFor additional context, see: Jill Dever & Richard Valliant (2010), "A comparison of variance estimators for poststratification to estimated control totals," Survey Methodology, 36(1), 45-56. ')
-  }
+
 
 }
