@@ -279,7 +279,7 @@ cwt_output <- function(
   # Define years to do calculations for (ytc)
   if (length(years)==1){
     if (years == "all"){
-      ytc <- unique(analysis_data$fn_year)
+      ytc <- sort(unique(analysis_data$fn_year))
     } else {
       ytc <- years
     }
@@ -607,7 +607,10 @@ cwt_output <- function(
                                                            labels = geolabels)} +
     {if (is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
     ggplot2::theme_minimal() +
-    ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc))
+    ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc)) +
+    theme(plot.background = element_rect(fill = "white", color = "white"),
+          #panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank())
 
   areaplots <- list()
   nationalplots <- list()
@@ -629,7 +632,10 @@ cwt_output <- function(
                                                              labels = geolabels)} +
       {if (is.null(geolabels)) ggplot2::scale_color_manual(values = pal, name = "")} +
       ggplot2::theme_minimal() +
-      ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc))
+      ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc)) +
+      theme(plot.background = element_rect(fill = "white", color = "white"),
+            #panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank())
 
     areaplots[[paste0("subnational_plot_", outcomevars[o])]] <- areaplot
 
@@ -647,7 +653,10 @@ cwt_output <- function(
       ggplot2::theme_minimal() +
       ggplot2::labs(x = "", y = "% Coverage", color = "") +
       ggplot2::ggtitle(paste0(countryname, " Coverage: ", outcomenames[o])) +
-      ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc))
+      ggplot2::scale_x_continuous(breaks = ytc, labels = round(ytc)) +
+      theme(plot.background = element_rect(fill = "white", color = "white"),
+            #panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank())
 
     nationalplots[[paste0("national_plot_", outcomevars[o])]] <- nationalplot
 
@@ -683,7 +692,7 @@ cwt_output <- function(
     if (ci %in% TRUE){
     cli::cli_warn('Note that confidence intervals calculated by this package do not take into account the additional variability introduced when post-stratifying to survey-estimated totals (rather than population values).\n\nFor additional context, see: Jill Dever & Richard Valliant (2010), "A comparison of variance estimators for poststratification to estimated control totals," Survey Methodology, 36(1), 45-56. ')
   }
-  
+
   # Datasets, tables, and plots to return
   list(weightdata = weight_df,
        outcomes = outcomes_df,
